@@ -753,6 +753,14 @@ private func convert(_ value: NFCNDEFTag, _ completionHandler: @escaping (TagPig
 
   value.queryNDEFStatus { status, capacity, error in
     if let error = error {
+      // 如果已经有标签数据（如 ISO7816、MiFare、FeliCa、ISO15693），即使 NDEF 失败也返回数据
+      if pigeon.iso7816 != nil || pigeon.miFare != nil || pigeon.feliCa != nil || pigeon.iso15693 != nil {
+        // 设置 NDEF 为不支持，但仍然返回标签数据
+        pigeon.ndef = NdefPigeon(status: .notSupported, capacity: 0)
+        completionHandler(pigeon, nil)
+        return
+      }
+      // 如果没有其他标签数据，才返回错误
       completionHandler(nil, error)
       return
     }
@@ -766,6 +774,12 @@ private func convert(_ value: NFCNDEFTag, _ completionHandler: @escaping (TagPig
     }
     value.readNDEF { message, error in
       if let error = error {
+        // 如果已经有标签数据，即使 NDEF 读取失败也返回数据
+        if pigeon.iso7816 != nil || pigeon.miFare != nil || pigeon.feliCa != nil || pigeon.iso15693 != nil {
+          completionHandler(pigeon, nil)
+          return
+        }
+        // 如果没有其他标签数据，才返回错误
         completionHandler(nil, error)
         return
       }
